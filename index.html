@@ -570,7 +570,22 @@
             return `${day}-${month}-${year} ${hour}:${minute} WITA`;
         } catch (e) { return dateInput; }
     }
-
+   * Mengubah format tanggal YYYY-MM-DD menjadi DD-MM-YYYY
+ */
+function formatDateIndo(dateInput) {
+    if (!dateInput) return '-';
+    try {
+        // Ambil hanya bagian tanggal jika berupa string ISO (misal: 2026-07-24T00:00:00.000Z)
+        const cleanDate = dateInput.split('T')[0];
+        const parts = cleanDate.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`; // Hasil: DD-MM-YYYY
+        }
+        return dateInput;
+    } catch (e) {
+        return dateInput;
+    }
+}
     function isDateInMonthAndYear(dateInput, targetYear, targetMonth) {
         if (!dateInput) return false;
         try {
@@ -892,7 +907,7 @@
                     let details = `<div class="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-600 space-y-1.5 shadow-inner">
                         <p class="flex justify-between"><span>Nama Pengguna:</span> <span class="font-semibold text-slate-800">${mappedUserName}</span></p>
                         <p class="flex justify-between"><span>Acara:</span> <span class="font-semibold text-slate-800 truncate ml-2" title="${comp.acara}">${comp.acara}</span></p>
-                        <p class="flex justify-between"><span>Tayang:</span> <span class="font-semibold text-slate-800">${tayangDate}</span></p>
+                        <p class="flex justify-between"><span>Tayang:</span> <span class="font-semibold text-slate-800">${formatDateIndo(comp.tayang)}</span></p>
                         <p class="flex justify-between"><span>Mulai:</span><span class="font-semibold text-slate-700">${formatToWITA(comp.waktu_mulai)}</span></p>
                     </div>`;
 
