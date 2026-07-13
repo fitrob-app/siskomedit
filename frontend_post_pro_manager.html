@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Pro Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- html2pdf for Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .content-transition { transition: opacity 0.3s ease, transform 0.3s ease; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animasi Toast */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px) translateX(-50%); }
+            to { opacity: 1; transform: translateY(0) translateX(-50%); }
+        }
+        .toast-animate { animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen w-screen flex antialiased selection:bg-blue-200 selection:text-blue-900 relative">
+
+    <!-- Loader Global -->
+    <div id="globalLoader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center">
+            <div class="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+            <p id="loaderText" class="text-slate-600 font-medium">Memproses data...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-lg z-[90] hidden items-center space-x-3 font-medium text-sm">
+        <i id="toastIcon" class="ph ph-info text-xl"></i>
+        <span id="toastMessage">Pesan informasi</span>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="absolute inset-0 z-50 flex bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1606857521015-7f9fcf423740?q=80&w=2070&auto=format&fit=crop');">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="w-full max-w-md m-auto bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 transform transition-all">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/30">
+                        <i class="ph ph-video-camera text-3xl text-white"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800">Post-Pro Manager</h1>
+                    <p class="text-slate-500 text-sm mt-1">Sistem Manajemen Aset Komputer Editing</p>
+                </div>
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">NIP (Nomor Induk Pegawai)</label>
+                        <div class="relative">
+                            <i class="ph ph-user absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-lg"></i>
+                            <input type="text" id="loginNip" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" placeholder="Masukkan NIP Anda">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                        <div class="relative">
+                            <i class="ph ph-lock-key absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-lg"></i>
+                            <input type="password" id="loginPass" required class="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" placeholder="••••••••">
+                            <button type="button" onclick="togglePassword('loginPass')" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <i class="ph ph-eye text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 mt-2">
+                        Masuk ke Sistem
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP CONTAINER -->
+    <div id="appContainer" class="hidden flex h-full w-full relative">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col h-full sidebar-transition flex-shrink-0 z-20 shadow-2xl">
+            <div class="h-20 flex items-center px-6 border-b border-slate-800">
+                <i class="ph ph-film-strip text-2xl text-blue-500 mr-3"></i>
+                <h2 class="text-xl font-bold text-white tracking-wide">Post-Pro Mgt</h2>
+            </div>
+            
+            <div class="p-6 border-b border-slate-800">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Login sebagai:</p>
+                <p id="userNama" class="text-white font-semibold truncate">Nama User</p>
+                <div class="flex items-center mt-1">
+                    <span id="userRoleBadge" class="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded">ROLE</span>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                <a href="#" onclick="navigateTo('dashboard', this)" class="nav-btn active flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white bg-blue-600 shadow-md shadow-blue-900/50 transition-all">
+                    <i class="ph ph-squares-four text-lg mr-3"></i> Status Komputer
+                </a>
+                <a href="#" onclick="navigateTo('history', this)" class="nav-btn flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="ph ph-clock-counter-clockwise text-lg mr-3"></i> Histori Penggunaan
+                </a>
+                <a href="#" onclick="navigateTo('report', this)" class="nav-btn flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="ph ph-file-pdf text-lg mr-3"></i> Laporan (Report)
+                </a>
+                
+                <div id="menuAdmin" class="hidden pt-4 mt-4 border-t border-slate-800 space-y-1">
+                    <p class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Manajemen Admin</p>
+                    <a href="#" onclick="navigateTo('users', this)" class="nav-btn flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                        <i class="ph ph-users-three text-lg mr-3"></i> Manajemen User
+                    </a>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-slate-800">
+                    <a href="#" onclick="navigateTo('settings', this)" class="nav-btn flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                        <i class="ph ph-gear text-lg mr-3"></i> Pengaturan Akun
+                    </a>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <button onclick="doLogout()" class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-400 hover:text-white hover:bg-red-500/20 rounded-xl transition-colors">
+                    <i class="ph ph-sign-out text-lg mr-2"></i> Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden relative">
+            
+            <!-- HEADER MOBILE (Hidden on Desktop) -->
+            <header class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-10 flex-shrink-0">
+                <div class="flex items-center text-blue-600 font-bold">
+                    <i class="ph ph-film-strip text-xl mr-2"></i> Post-Pro
+                </div>
+                <button class="p-2 text-slate-500 bg-slate-100 rounded-lg"><i class="ph ph-list text-xl"></i></button>
+            </header>
+
+            <!-- PAGES WRAPPER -->
+            <div class="flex-1 overflow-y-auto p-6 relative scroller">
+                
+                <!-- 1. DASHBOARD PAGE -->
+                <div id="page-dashboard" class="page-content block">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                        <h1 class="text-2xl font-bold text-slate-800">Status Komputer</h1>
+                        <button onclick="fetchData()" class="mt-3 sm:mt-0 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-medium shadow-sm transition-all flex items-center">
+                            <i class="ph ph-arrows-clockwise mr-2"></i> Refresh Data
+                        </button>
+                    </div>
+
+                    <!-- SUMMARY WIDGET (DOCKING / STICKY) -->
+                    <div class="sticky top-0 z-20 backdrop-blur-md bg-slate-50/90 -mx-6 px-6 py-4 shadow-sm mb-6 flex flex-wrap gap-4 border-b border-slate-200/50">
+                        <div class="flex-1 min-w-[140px] bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                            <div><p class="text-xs font-bold text-slate-500 uppercase">Total Unit</p><h3 id="sumTotal" class="text-2xl font-black text-slate-800">0</h3></div>
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center"><i class="ph ph-desktop text-blue-500 text-xl"></i></div>
+                        </div>
+                        <div class="flex-1 min-w-[140px] bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                            <div><p class="text-xs font-bold text-slate-500 uppercase">Tersedia</p><h3 id="sumTersedia" class="text-2xl font-black text-slate-800">0</h3></div>
+                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center"><i class="ph ph-check-circle text-emerald-500 text-xl"></i></div>
+                        </div>
+                        <div class="flex-1 min-w-[140px] bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                            <div><p class="text-xs font-bold text-slate-500 uppercase">Terpakai</p><h3 id="sumTerpakai" class="text-2xl font-black text-slate-800">0</h3></div>
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center"><i class="ph ph-lock-key text-red-500 text-xl"></i></div>
+                        </div>
+                        <div class="flex-1 min-w-[140px] bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                            <div><p class="text-xs font-bold text-slate-500 uppercase">Maintenance</p><h3 id="sumMtc" class="text-2xl font-black text-slate-800">0</h3></div>
+                            <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center"><i class="ph ph-wrench text-amber-500 text-xl"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- TOMBOL TAMBAH (Hanya Admin) -->
+                    <div id="adminControls" class="hidden mb-6 bg-blue-50 p-4 rounded-xl border border-blue-100 flex justify-between items-center">
+                        <div class="flex items-center text-blue-800 font-medium">
+                            <i class="ph ph-hard-drives text-2xl mr-3"></i> Manajemen Aset Komputer
+                        </div>
+                        <button onclick="document.getElementById('modalAddComputer').classList.remove('hidden')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center">
+                            <i class="ph ph-plus mr-2"></i> Tambah Komputer
+                        </button>
+                    </div>
+
+                    <!-- GRID KOMPUTER -->
+                    <div id="computersGrid" class="space-y-8 pb-10">
+                        <!-- Konten di-generate dari JS -->
+                    </div>
+                </div>
+
+                <!-- 2. HISTORY PAGE -->
+                <div id="page-history" class="page-content hidden">
+                    <h1 class="text-2xl font-bold text-slate-800 mb-6">Histori Penggunaan</h1>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="px-4 py-3 font-semibold">Mulai</th>
+                                        <th class="px-4 py-3 font-semibold">Selesai</th>
+                                        <th class="px-4 py-3 font-semibold">ID Komputer</th>
+                                        <th class="px-4 py-3 font-semibold">Nama Pengguna</th>
+                                        <th class="px-4 py-3 font-semibold">Program/Acara</th>
+                                        <th class="px-4 py-3 font-semibold">Produser</th>
+                                        <th class="px-4 py-3 font-semibold">Pengarah Acara</th>
+                                        <th class="px-4 py-3 font-semibold">Tayang</th>
+                                        <th class="px-4 py-3 font-semibold">Catatan / Review</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody" class="divide-y divide-slate-100">
+                                    <!-- History rows generated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. REPORT PAGE -->
+                <div id="page-report" class="page-content hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                        <h1 class="text-2xl font-bold text-slate-800">Laporan (Report)</h1>
+                        <div class="flex gap-2 mt-3 sm:mt-0">
+                            <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center">
+                                <i class="ph ph-file-xls mr-2"></i> Ekspor Excel
+                            </button>
+                            <button onclick="exportToPDF()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center">
+                                <i class="ph ph-file-pdf mr-2"></i> Ekspor PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Bulan</label>
+                                <select id="filterBulan" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">Semua Bulan</option>
+                                    <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option>
+                                    <option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option>
+                                    <option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option>
+                                    <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Tahun</label>
+                                <select id="filterTahun" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">Semua Tahun</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Cari Spesifik</label>
+                                <input type="text" id="filterSearch" placeholder="Ketik nama/acara/pc..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <button onclick="renderReport()" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg text-sm transition-colors">
+                                    Terapkan Filter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" id="reportPreview">
+                        <div class="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800">Preview Laporan Penggunaan</h2>
+                                <p class="text-sm text-slate-500" id="reportSubtitle">Periode: Semua Waktu</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse" id="reportTable">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="px-3 py-2 font-semibold">No</th>
+                                        <th class="px-3 py-2 font-semibold">Waktu Mulai</th>
+                                        <th class="px-3 py-2 font-semibold">Waktu Selesai</th>
+                                        <th class="px-3 py-2 font-semibold">PC</th>
+                                        <th class="px-3 py-2 font-semibold">Nama Pengguna</th>
+                                        <th class="px-3 py-2 font-semibold">Acara</th>
+                                        <th class="px-3 py-2 font-semibold">Catatan / Review</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportBody" class="divide-y divide-slate-100">
+                                    <!-- Report rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. USERS PAGE (Admin Only) -->
+                <div id="page-users" class="page-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-slate-800">Manajemen User</h1>
+                        <button onclick="document.getElementById('modalAddUser').classList.remove('hidden')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center">
+                            <i class="ph ph-user-plus mr-2"></i> Tambah User
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700">Daftar Pengguna</h3>
+                            <button onclick="fetchUsers()" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"><i class="ph ph-arrows-clockwise mr-1"></i> Refresh</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                        <th class="px-4 py-3 font-semibold">NIP</th>
+                                        <th class="px-4 py-3 font-semibold">Nama Lengkap</th>
+                                        <th class="px-4 py-3 font-semibold">Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersBody" class="divide-y divide-slate-100">
+                                    <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500"><div class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>Memuat data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SETTINGS PAGE -->
+                <div id="page-settings" class="page-content hidden max-w-2xl">
+                    <h1 class="text-2xl font-bold text-slate-800 mb-6">Pengaturan Akun</h1>
+                    
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="ph ph-shield-check text-emerald-500 mr-2"></i> Ubah Password</h3>
+                        <form id="formChangePassword" onsubmit="submitChangePassword(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Password Baru</label>
+                                <div class="relative">
+                                    <input type="password" id="setPass1" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button type="button" onclick="togglePassword('setPass1')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"><i class="ph ph-eye"></i></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Konfirmasi Password</label>
+                                <div class="relative">
+                                    <input type="password" id="setPass2" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button type="button" onclick="togglePassword('setPass2')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"><i class="ph ph-eye"></i></button>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium transition-colors">Update Password</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- KUMPULAN MODALS -->
+        <!-- Modal Mulai Sesi -->
+        <div id="modalStartSession" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity opacity-0">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden transform scale-95 transition-transform" id="modalStartSessionContent">
+                <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Mulai Sesi Editing</h3>
+                    <button onclick="closeStartSessionModal()" class="text-white hover:text-blue-200"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-slate-600">Komputer: <span id="formStartPcId" class="font-bold text-blue-600"></span></p>
+                    <input type="text" id="formStartAcara" placeholder="Nama Program / Acara" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="formStartProduser" placeholder="Nama Produser" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="formStartPA" placeholder="Pengarah Acara (PA)" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Tanggal Tayang</label>
+                            <input type="date" id="formStartTayang" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Durasi Paket (Menit)</label>
+                            <input type="number" id="formStartDurasi" placeholder="Misal: 60" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-2">
+                        <button onclick="closeStartSessionModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors">Batal</button>
+                        <button onclick="submitStartSession()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors">Mulai Sesi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Selesai Sesi -->
+        <div id="modalEndSession" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity opacity-0">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden transform scale-95 transition-transform" id="modalEndSessionContent">
+                <div class="bg-red-500 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg flex items-center"><i class="ph ph-stop-circle mr-2 text-xl"></i> Akhiri Sesi</h3>
+                    <button onclick="closeEndSessionModal()" class="text-white hover:text-red-200"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="p-6">
+                    <p class="text-slate-600 mb-4">Anda akan mengakhiri sesi untuk <span id="formEndPcId" class="font-bold text-red-600"></span>.</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Catatan / Review Alat</label>
+                        <textarea id="formEndCatatan" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none h-24" placeholder="Apakah ada kendala alat selama editing?"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeEndSessionModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-medium transition-colors">Batal</button>
+                        <button onclick="submitEndSession()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium shadow-sm transition-colors">Selesai Editing</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Tambah Komputer (Admin) -->
+        <div id="modalAddComputer" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden">
+                <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Tambah Komputer Baru</h3>
+                    <button onclick="document.getElementById('modalAddComputer').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <form onsubmit="submitAddComputer(event)" class="p-6 space-y-4">
+                    <input type="text" id="addCompId" placeholder="ID Komputer (Cth: PC-10)" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    <input type="text" id="addCompNama" placeholder="Nama/Merk (Cth: Mac Studio)" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    <input type="text" id="addCompSpek" placeholder="Spesifikasi Singkat" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="addCompTahun" placeholder="Tahun" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                        <input type="text" id="addCompLokasi" placeholder="Lokasi Ruangan" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    </div>
+                    <div class="pt-2 flex justify-end gap-2">
+                        <button type="button" onclick="document.getElementById('modalAddComputer').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-medium">Batal</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Tambah User (Admin) -->
+        <div id="modalAddUser" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden">
+                <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Tambah Pengguna</h3>
+                    <button onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <form onsubmit="submitAddUser(event)" class="p-6 space-y-4">
+                    <input type="text" id="addUserNip" placeholder="NIP" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <input type="text" id="addUserName" placeholder="Nama Lengkap" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <input type="password" id="addUserPass" placeholder="Password Awal" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <select id="addUserRole" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <option value="Editor">Editor</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <div class="pt-2 flex justify-end gap-2">
+                        <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-medium">Batal</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Simpan User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Mulai Maintenance -->
+        <div id="modalStartMaintenance" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity opacity-0">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden transform scale-95 transition-transform" id="modalStartMaintenanceContent">
+                <div class="bg-amber-500 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg flex items-center"><i class="ph ph-wrench mr-2"></i> Mulai Perbaikan</h3>
+                    <button onclick="closeStartMaintenanceModal()" class="text-white hover:text-amber-200"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="p-6">
+                    <p class="text-slate-600 mb-4">Anda akan memulai sesi maintenance untuk komputer <span id="mtcStartPcId" class="font-bold text-amber-600"></span>.</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Catatan/Keluhan Awal</label>
+                        <textarea id="mtcKeluhan" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all resize-none h-24" placeholder="Misal: Komputer sering restart sendiri..."></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeStartMaintenanceModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-medium transition-colors">Batal</button>
+                        <button onclick="submitStartMaintenance()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center">
+                            <i class="ph ph-wrench mr-2"></i> Mulai Maintenance
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Selesai Maintenance -->
+        <div id="modalEndMaintenance" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity opacity-0">
+            <div class="bg-white rounded-2xl shadow-xl w-11/12 max-w-md overflow-hidden transform scale-95 transition-transform" id="modalEndMaintenanceContent">
+                <div class="bg-emerald-500 p-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg flex items-center"><i class="ph ph-check-circle mr-2"></i> Selesai Perbaikan</h3>
+                    <button onclick="closeEndMaintenanceModal()" class="text-white hover:text-emerald-200"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="p-6">
+                    <p class="text-slate-600 mb-4">Akhiri sesi maintenance untuk komputer <span id="mtcEndPcId" class="font-bold text-emerald-600"></span>.</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Tindakan Perbaikan</label>
+                        <textarea id="mtcTindakan" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all resize-none h-24" placeholder="Misal: Membersihkan RAM dan ganti thermal paste..."></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button onclick="closeEndMaintenanceModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-medium transition-colors">Batal</button>
+                        <button onclick="submitEndMaintenance()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center">
+                            <i class="ph ph-check mr-2"></i> Selesai & Simpan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT UTAMA -->
+    <script>
+    const IS_PREVIEW = false; // Ubah ke false saat implementasi real di Blogger
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyCgU4sIqI5OonQ11Zk5dF-hB2GgLszK-T31Xh7G6gB/dev"; // GANTI DENGAN URL DEPLOY ANDA!
+
+    let currentUser = null;
+    let currentSessionId = null;
+    let currentMtcId = null;
+    let dataComputers = [];
+    let dataHistory = [];
+    let dataUsers = [];
+    let userMap = {}; // Untuk pencarian cepat NIP -> Nama
+
+    // === UTILS ===
+    function showToast(msg, type = "info") {
+        const toast = document.getElementById('toast');
+        document.getElementById('toastMessage').innerText = msg;
+        const icon = document.getElementById('toastIcon');
+        
+        toast.className = "fixed bottom-6 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-full shadow-xl z-[90] flex items-center space-x-3 font-medium text-sm toast-animate";
+        if(type === "error") {
+            toast.classList.add("bg-red-600");
+            icon.className = "ph ph-warning-circle text-xl";
+        } else if (type === "success") {
+            toast.classList.add("bg-emerald-600");
+            icon.className = "ph ph-check-circle text-xl";
+        } else {
+            toast.classList.add("bg-slate-800");
+            icon.className = "ph ph-info text-xl";
+        }
+
+        toast.classList.remove('hidden');
+        setTimeout(() => { 
+            toast.classList.remove('toast-animate');
+            toast.classList.add('hidden'); 
+        }, 3000);
+    }
+
+    function showLoader(text = "Memproses...") {
+        document.getElementById('loaderText').innerText = text;
+        document.getElementById('globalLoader').classList.remove('hidden');
+    }
+    
+    function hideLoader() {
+        document.getElementById('globalLoader').classList.add('hidden');
+    }
+
+    function getCurrentWITA() {
+        // Ambil waktu saat ini
+        const now = new Date();
+        // Format menggunakan Intl.DateTimeFormat spesifik timezone Asia/Makassar (WITA)
+        const options = {
+            timeZone: 'Asia/Makassar',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false
+        };
+        const formatter = new Intl.DateTimeFormat('id-ID', options);
+        // Hasil dari formatter biasanya: "dd/mm/yyyy, hh.mm.ss" (tergantung browser)
+        // Kita parsing agar konsisten yyyy-mm-dd hh:mm:ss
+        const parts = formatter.formatToParts(now);
+        const p = {};
+        parts.forEach(part => { p[part.type] = part.value; });
+        return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+    }
+
+    function togglePassword(id) {
+        const input = document.getElementById(id);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function apiCall(action, payload = {}) {
+        if (IS_PREVIEW) {
+            await new Promise(r => setTimeout(r, 800)); // Simulasi delay
+            return dummyBackend(action, payload);
+        }
+
+        const formData = new FormData();
+        formData.append('action', action);
+        formData.append('payload', JSON.stringify(payload));
+
+        const response = await fetch(GAS_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+        
+        if (!result.success) throw new Error(result.message);
+        return result.data;
+    }
+
+    // === AUTH & INITIALIZATION ===
+    async function handleLogin(e) {
+        e.preventDefault();
+        const nip = document.getElementById('loginNip').value;
+        const pass = document.getElementById('loginPass').value;
+
+        showLoader("Autentikasi...");
+        try {
+            const user = await apiCall('login', { nip, pass });
+            currentUser = user;
+            sessionStorage.setItem('postProUser', JSON.stringify(user));
+            
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            
+            initDashboard();
+            hideLoader();
+            showToast(`Selamat datang, ${user.nama}`, "success");
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    function doLogout() {
+        sessionStorage.removeItem('postProUser');
+        window.location.reload();
+    }
+
+    async function initDashboard() {
+        // Silent fetch users first for mapping
+        try {
+            const users = await apiCall('getUsers');
+            dataUsers = users;
+            userMap = {};
+            users.forEach(u => userMap[String(u.nip)] = u.nama);
+        } catch (e) {
+            console.warn("Gagal pre-fetch users");
+        }
+
+        document.getElementById('userNama').innerText = currentUser.nama;
+        const badge = document.getElementById('userRoleBadge');
+        badge.innerText = currentUser.role.toUpperCase();
+        
+        if (currentUser.role === 'Admin') {
+            badge.className = "px-2 py-0.5 bg-amber-500/20 text-amber-600 border border-amber-500/30 text-xs font-bold rounded";
+            document.getElementById('menuAdmin').classList.remove('hidden');
+            document.getElementById('adminControls').classList.remove('hidden');
+        } else {
+            badge.className = "px-2 py-0.5 bg-blue-500/20 text-blue-600 border border-blue-500/30 text-xs font-bold rounded";
+        }
+
+        setupYearsFilter();
+        fetchData(); // Fetch computers
+    }
+
+    function setupYearsFilter() {
+        const yearSelect = document.getElementById('filterTahun');
+        const currentYear = new Date().getFullYear();
+        for(let i = currentYear; i >= 2020; i--) {
+            const opt = document.createElement('option');
+            opt.value = i; opt.innerText = i;
+            yearSelect.appendChild(opt);
+        }
+    }
+
+    // === NAVIGATION ===
+    function navigateTo(pageId, btnElement) {
+        document.querySelectorAll('.page-content').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('block');
+        });
+        const target = document.getElementById('page-' + pageId);
+        target.classList.remove('hidden');
+        target.classList.add('block');
+
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-900/50', 'active');
+            btn.classList.add('hover:bg-slate-800', 'hover:text-white');
+        });
+        
+        if(btnElement) {
+            btnElement.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-900/50', 'active');
+            btnElement.classList.remove('hover:bg-slate-800');
+        }
+
+        // Action on load page
+        if (pageId === 'dashboard') fetchData();
+        if (pageId === 'history' || pageId === 'report') fetchHistory();
+        if (pageId === 'users' && currentUser.role === 'Admin') fetchUsers();
+    }
+
+    // === DATA FETCHING & RENDERING ===
+    async function fetchData(silent = false) {
+        if(!silent) showLoader("Memuat data status...");
+        try {
+            const data = await apiCall('getDashboard');
+            dataComputers = data.computers;
+            renderComputers();
+            if(!silent) hideLoader();
+        } catch (error) {
+            if(!silent) hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    function renderComputers() {
+        const grid = document.getElementById('computersGrid');
+        grid.innerHTML = '';
+        
+        // 1. Hitung Summary
+        let total = dataComputers.length;
+        let tersedia = 0, terpakai = 0, mtc = 0;
+        
+        // 2. Kelompokkan berdasarkan Lokasi
+        const grouped = dataComputers.reduce((acc, comp) => {
+            if (comp.status === 'Tersedia') tersedia++;
+            else if (comp.status === 'Terpakai') terpakai++;
+            else if (comp.status === 'Maintenance') mtc++;
+
+            const loc = comp.lokasi || 'Lokasi Lainnya';
+            if (!acc[loc]) acc[loc] = [];
+            acc[loc].push(comp);
+            return acc;
+        }, {});
+
+        // Update Summary UI
+        document.getElementById('sumTotal').innerText = total;
+        document.getElementById('sumTersedia').innerText = tersedia;
+        document.getElementById('sumTerpakai').innerText = terpakai;
+        document.getElementById('sumMtc').innerText = mtc;
+
+        if(dataComputers.length === 0) {
+            grid.innerHTML = `<div class="text-center p-10 bg-white rounded-2xl border border-slate-200 shadow-sm"><i class="ph ph-hard-drives text-4xl text-slate-400 mb-3 block"></i><p class="text-slate-500">Belum ada data komputer terdaftar.</p></div>`;
+            return;
+        }
+
+        // Render per Ruangan
+        for (const [ruangan, comps] of Object.entries(grouped)) {
+            // Wrapper Ruangan
+            const roomWrapper = document.createElement('div');
+            roomWrapper.className = "mb-8";
+            
+            // Header Ruangan
+            const roomHeader = document.createElement('div');
+            roomHeader.className = "flex items-center mb-4 border-b border-slate-200 pb-2";
+            roomHeader.innerHTML = `
+                <div class="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center mr-3 shadow-sm">
+                    <i class="ph ph-door text-lg"></i>
+                </div>
+                <h2 class="text-lg font-bold text-slate-800">${ruangan}</h2>
+                <span class="ml-3 px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full border border-slate-200">${comps.length} Unit</span>
+            `;
+            roomWrapper.appendChild(roomHeader);
+
+            // Container Grid Komputer untuk Ruangan ini
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6";
+
+            comps.forEach(comp => {
+                const isSaya = comp.pengguna === currentUser.nip;
+                const namaPeminjam = userMap[comp.pengguna] || comp.pengguna || '-';
+                
+                let cardClass = "bg-white rounded-2xl p-5 border shadow-sm transition-all hover:shadow-md relative overflow-hidden flex flex-col h-full ";
+                if (comp.status === 'Tersedia') cardClass += "border-emerald-200 border-l-4 border-l-emerald-500";
+                else if (comp.status === 'Maintenance') cardClass += "border-amber-200 border-l-4 border-l-amber-500 bg-amber-50/10";
+                else cardClass += "border-red-200 border-l-4 border-l-red-500";
+
+                const card = document.createElement('div');
+                card.className = cardClass;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mr-4 border border-slate-200">
+                                <i class="ph ph-desktop text-2xl text-slate-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg leading-tight">${comp.id} <span class="text-sm font-medium text-slate-500">(${comp.nama})</span></h3>
+                                <p class="text-xs text-slate-500 flex items-center mt-1"><i class="ph ph-map-pin mr-1"></i> ${comp.lokasi}</p>
+                            </div>
+                        </div>
+                        ${currentUser && currentUser.role === 'Admin' ? `
+                            <button onclick="${comp.status === 'Maintenance' ? `openEndMaintenanceModal('${comp.id}')` : `openStartMaintenanceModal('${comp.id}')`}" 
+                                    class="p-2 rounded-full ${comp.status === 'Maintenance' ? 'bg-amber-100 text-amber-600 shadow-inner' : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-blue-600'} transition-colors" title="Mode Maintenance">
+                                <i class="ph ph-wrench"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="bg-slate-50 rounded-lg p-3 mb-4 border border-slate-100 flex-1">
+                        <p class="text-sm text-slate-600 mb-1"><span class="text-slate-400">Spek:</span> ${comp.spek}</p>
+                        <p class="text-sm text-slate-600"><span class="text-slate-400">Tahun:</span> ${comp.tahun}</p>
+                    </div>
+
+                    <div class="mt-auto pt-2">
+                        ${comp.status === 'Tersedia' ? `
+                            <button onclick="openStartSessionModal('${comp.id}')" class="w-full py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold rounded-xl transition-colors text-sm border border-emerald-200 shadow-sm flex items-center justify-center">
+                                <i class="ph ph-check-circle mr-2 text-lg"></i> Tersedia (Mulai Sesi)
+                            </button>
+                        ` : ''}
+
+                        ${comp.status === 'Maintenance' ? `
+                            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                                <div class="flex items-center text-amber-600 font-semibold mb-2 justify-center text-sm">
+                                    <i class="ph ph-wrench mr-2 text-lg"></i> Maintenance
+                                </div>
+                                ${currentUser && currentUser.role === 'Admin' ? `
+                                    <button onclick="openEndMaintenanceModal('${comp.id}')" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center">
+                                        <i class="ph ph-check-circle mr-2"></i> Selesai Perbaikan
+                                    </button>
+                                ` : `
+                                    <div class="w-full py-2 bg-amber-100 text-amber-600 font-bold rounded-lg text-center text-sm border border-amber-200">
+                                        Perbaikan Berjalan
+                                    </div>
+                                `}
+                            </div>
+                        ` : ''}
+
+                        ${comp.status === 'Terpakai' ? `
+                            <div class="p-3 bg-red-50 rounded-xl border border-red-100 relative">
+                                ${isSaya ? `
+                                    <button onclick="openEndSessionModal('${comp.id}')" class="w-full py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-colors text-sm shadow-sm flex items-center justify-center mb-3">
+                                        <i class="ph ph-stop-circle mr-2 text-lg"></i> Akhiri Sesi Saya
+                                    </button>
+                                ` : `
+                                    <div class="w-full py-2 bg-red-100 text-red-600 font-bold rounded-lg text-center text-sm mb-3 border border-red-200 flex justify-center items-center">
+                                        <i class="ph ph-lock-key mr-2 text-lg"></i> Sedang Dipakai
+                                    </div>
+                                `}
+                                <div class="space-y-1.5 text-xs">
+                                    <div class="flex justify-between border-b border-red-100 pb-1"><span class="text-slate-500">User:</span><span class="font-bold text-slate-800 text-right truncate w-32" title="${namaPeminjam}">${namaPeminjam}</span></div>
+                                    <div class="flex justify-between border-b border-red-100 pb-1"><span class="text-slate-500">Acara:</span><span class="font-bold text-slate-800 text-right truncate w-32" title="${comp.acara}">${comp.acara}</span></div>
+                                    <div class="flex justify-between border-b border-red-100 pb-1"><span class="text-slate-500">Tayang:</span><span class="font-bold text-slate-800 text-right">${comp.tayang}</span></div>
+                                    <div class="flex justify-between pt-0.5"><span class="text-slate-500">Mulai:</span><span class="font-semibold text-slate-700">${(comp.waktu_mulai || '').split(' ')[1] || '-'}</span></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+            
+            roomWrapper.appendChild(cardsContainer);
+            grid.appendChild(roomWrapper);
+        }
+    }
+
+    async function fetchHistory(forceFetch = false) {
+        if(dataHistory.length === 0 || forceFetch) {
+            showLoader("Memuat histori...");
+            try {
+                dataHistory = await apiCall('getHistory');
+                hideLoader();
+            } catch (error) {
+                hideLoader();
+                showToast(error.message, "error");
+                return;
+            }
+        }
+        
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+        if(dataHistory.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-slate-500">Belum ada riwayat penggunaan</td></tr>`;
+            renderReport(); // Sync with report table
+            return;
+        }
+
+        // Tampilkan urut dari yang terbaru (reverse)
+        [...dataHistory].reverse().forEach(h => {
+            const isMaintenance = h.acara === 'MAINTENANCE';
+            const textClass = isMaintenance ? 'text-red-600 font-semibold' : 'text-slate-700';
+            const bgRow = isMaintenance ? 'bg-red-50/50 hover:bg-red-50/80 border-l-4 border-l-red-500' : 'hover:bg-slate-50';
+            
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-slate-100 transition-colors text-sm ${bgRow}`;
+            tr.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap ${textClass}">${h.waktu_mulai}</td>
+                <td class="px-4 py-3 whitespace-nowrap ${textClass}">${h.waktu_selesai}</td>
+                <td class="px-4 py-3 font-bold ${textClass}">${h.id_komputer}</td>
+                <td class="px-4 py-3 ${textClass}">${h.nama_pengguna || h.nip}</td>
+                <td class="px-4 py-3 ${textClass}">${isMaintenance ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded-md text-xs font-bold flex items-center w-max"><i class="ph ph-wrench mr-1"></i> MAINTENANCE</span>' : h.acara}</td>
+                <td class="px-4 py-3 ${textClass}">${h.produser}</td>
+                <td class="px-4 py-3 ${textClass}">${h.pa}</td>
+                <td class="px-4 py-3 ${textClass}">${h.tayang}</td>
+                <td class="px-4 py-3 ${textClass}">${h.catatan}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        renderReport();
+    }
+
+    function renderReport() {
+        const tbody = document.getElementById('reportBody');
+        tbody.innerHTML = '';
+        
+        const b = document.getElementById('filterBulan').value;
+        const t = document.getElementById('filterTahun').value;
+        const s = document.getElementById('filterSearch').value.toLowerCase();
+
+        let filteredData = dataHistory.filter(h => {
+            let matchDate = true;
+            if(h.waktu_mulai) {
+                const parts = h.waktu_mulai.split(' ')[0].split('-'); // yyyy-mm-dd
+                if(parts.length === 3) {
+                    if(b !== 'all' && parts[1] !== b) matchDate = false;
+                    if(t !== 'all' && parts[0] !== t) matchDate = false;
+                }
+            }
+            
+            let matchSearch = true;
+            if(s) {
+                const str = `${h.id_komputer} ${h.nama_pengguna} ${h.acara} ${h.catatan}`.toLowerCase();
+                if(!str.includes(s)) matchSearch = false;
+            }
+            return matchDate && matchSearch;
+        });
+
+        if(filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">Tidak ada data sesuai filter</td></tr>`;
+            return;
+        }
+        
+        let i = 1;
+        filteredData.forEach(h => {
+            const isMaintenance = h.acara === 'MAINTENANCE';
+            const textClass = isMaintenance ? 'text-red-600 font-semibold' : 'text-slate-700';
+            const bgRow = isMaintenance ? 'bg-red-50/50 border-l-2 border-l-red-500' : '';
+
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-slate-100 text-sm ${bgRow}`;
+            tr.innerHTML = `
+                <td class="px-3 py-2 ${textClass}">${i++}</td>
+                <td class="px-3 py-2 whitespace-nowrap ${textClass}">${h.waktu_mulai}</td>
+                <td class="px-3 py-2 whitespace-nowrap ${textClass}">${h.waktu_selesai}</td>
+                <td class="px-3 py-2 font-bold ${textClass}">${h.id_komputer}</td>
+                <td class="px-3 py-2 ${textClass}">${h.nama_pengguna || h.nip}</td>
+                <td class="px-3 py-2 ${textClass}">${isMaintenance ? 'MAINTENANCE' : h.acara}</td>
+                <td class="px-3 py-2 ${textClass}">${h.catatan}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function exportToPDF() {
+        const element = document.getElementById('reportPreview').cloneNode(true);
+        element.style.width = '1000px'; 
+        element.style.padding = '20px';
+        element.classList.remove('shadow-sm', 'rounded-2xl', 'border');
+        element.classList.add('bg-white');
+
+        const opt = {
+            margin:       0.5,
+            filename:     `Laporan_PostPro_${new Date().getTime()}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.left = '-9999px';
+        wrapper.appendChild(element);
+        document.body.appendChild(wrapper);
+
+        showLoader("Menyiapkan PDF...");
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.body.removeChild(wrapper);
+            hideLoader();
+            showToast("PDF Berhasil diunduh", "success");
+        });
+    }
+
+    function exportToExcel() {
+        if(dataHistory.length === 0) return showToast("Tidak ada data untuk diekspor", "error");
+        
+        const ws = XLSX.utils.json_to_sheet(dataHistory);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+        XLSX.writeFile(wb, `Laporan_PostPro_${new Date().getTime()}.xlsx`);
+    }
+
+    async function fetchUsers() {
+        showLoader("Memuat data pengguna...");
+        try {
+            dataUsers = await apiCall('getUsers');
+            const tbody = document.getElementById('usersBody');
+            tbody.innerHTML = '';
+            
+            // Re-map real-time map
+            userMap = {};
+            
+            dataUsers.forEach(u => {
+                userMap[String(u.nip)] = u.nama;
+                
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-700">${u.nip}</td>
+                    <td class="px-4 py-3 text-slate-700">${u.nama}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 ${u.role === 'Admin' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'} rounded-md text-xs font-bold">${u.role}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            hideLoader();
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    // === MODAL TOGGLES ===
+    function openStartSessionModal(id) {
+        currentSessionId = id;
+        document.getElementById('formStartPcId').innerText = id;
+        const modal = document.getElementById('modalStartSession');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalStartSessionContent').classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeStartSessionModal() {
+        const modal = document.getElementById('modalStartSession');
+        modal.classList.add('opacity-0');
+        document.getElementById('modalStartSessionContent').classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); currentSessionId = null; }, 300);
+    }
+
+    function openEndSessionModal(id) {
+        currentSessionId = id;
+        document.getElementById('formEndPcId').innerText = id;
+        document.getElementById('formEndCatatan').value = '';
+        const modal = document.getElementById('modalEndSession');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalEndSessionContent').classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeEndSessionModal() {
+        const modal = document.getElementById('modalEndSession');
+        modal.classList.add('opacity-0');
+        document.getElementById('modalEndSessionContent').classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); currentSessionId = null; }, 300);
+    }
+    
+    function openStartMaintenanceModal(id) {
+        currentMtcId = id;
+        document.getElementById('mtcStartPcId').innerText = id;
+        document.getElementById('mtcKeluhan').value = '';
+        const modal = document.getElementById('modalStartMaintenance');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalStartMaintenanceContent').classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeStartMaintenanceModal() {
+        const modal = document.getElementById('modalStartMaintenance');
+        modal.classList.add('opacity-0');
+        document.getElementById('modalStartMaintenanceContent').classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); currentMtcId = null; }, 300);
+    }
+
+    function openEndMaintenanceModal(id) {
+        currentMtcId = id;
+        document.getElementById('mtcEndPcId').innerText = id;
+        document.getElementById('mtcTindakan').value = '';
+        const modal = document.getElementById('modalEndMaintenance');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalEndMaintenanceContent').classList.remove('scale-95');
+        }, 10);
+    }
+
+    function closeEndMaintenanceModal() {
+        const modal = document.getElementById('modalEndMaintenance');
+        modal.classList.add('opacity-0');
+        document.getElementById('modalEndMaintenanceContent').classList.add('scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); currentMtcId = null; }, 300);
+    }
+
+    // === SUBMIT ACTIONS ===
+    async function submitStartSession() {
+        if (!currentSessionId) return;
+        const acara = document.getElementById('formStartAcara').value;
+        const produser = document.getElementById('formStartProduser').value;
+        const pa = document.getElementById('formStartPA').value;
+        const tayang = document.getElementById('formStartTayang').value;
+        const durasi = document.getElementById('formStartDurasi').value;
+
+        if(!acara || !produser || !pa || !tayang || !durasi) {
+            showToast("Semua field wajib diisi!", "error"); return;
+        }
+
+        const payload = { id: currentSessionId, nip: currentUser.nip, waktu: getCurrentWITA(), acara, produser, pa, tayang, durasi };
+        
+        showLoader("Memulai Sesi...");
+        try {
+            await apiCall('startSession', payload);
+            closeStartSessionModal();
+            showToast("Sesi berhasil dimulai", "success");
+            fetchData();
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitEndSession() {
+        if (!currentSessionId) return;
+        const catatan = document.getElementById('formEndCatatan').value || "Aman";
+        const payload = { id: currentSessionId, waktu: getCurrentWITA(), catatan };
+        
+        showLoader("Mengakhiri Sesi...");
+        try {
+            await apiCall('endSession', payload);
+            closeEndSessionModal();
+            showToast("Sesi berhasil diakhiri", "success");
+            fetchData();
+            fetchHistory(true);
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitStartMaintenance() {
+        if (!currentMtcId) return;
+        const keluhan = document.getElementById('mtcKeluhan').value;
+        if(!keluhan) { showToast("Keluhan awal wajib diisi", "error"); return; }
+
+        const payload = { id: currentMtcId, nip: currentUser.nip, waktu: getCurrentWITA(), keluhan: keluhan };
+        
+        showLoader("Memulai Perbaikan...");
+        try {
+            await apiCall('startMaintenance', payload);
+            closeStartMaintenanceModal();
+            showToast(`Sesi perbaikan ${currentMtcId} dimulai`, "success");
+            fetchData();
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitEndMaintenance() {
+        if (!currentMtcId) return;
+        const tindakan = document.getElementById('mtcTindakan').value;
+        if (!tindakan) { showToast("Tindakan perbaikan wajib diisi", "error"); return; }
+        
+        const payload = { id: currentMtcId, waktu: getCurrentWITA(), tindakan: tindakan };
+        
+        showLoader("Menyelesaikan Perbaikan...");
+        try {
+            await apiCall('endMaintenance', payload);
+            closeEndMaintenanceModal();
+            showToast(`Perbaikan ${currentMtcId} selesai`, "success");
+            fetchData();
+            fetchHistory(true); 
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitAddUser(e) {
+        e.preventDefault();
+        const payload = {
+            nip: document.getElementById('addUserNip').value,
+            nama: document.getElementById('addUserName').value,
+            pass: document.getElementById('addUserPass').value,
+            role: document.getElementById('addUserRole').value
+        };
+        showLoader("Menyimpan user...");
+        try {
+            await apiCall('addUser', payload);
+            document.getElementById('modalAddUser').classList.add('hidden');
+            e.target.reset();
+            showToast("User berhasil ditambahkan", "success");
+            fetchUsers();
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitAddComputer(e) {
+        e.preventDefault();
+        const payload = {
+            id: document.getElementById('addCompId').value,
+            nama: document.getElementById('addCompNama').value,
+            spek: document.getElementById('addCompSpek').value,
+            tahun: document.getElementById('addCompTahun').value,
+            lokasi: document.getElementById('addCompLokasi').value
+        };
+        showLoader("Menyimpan komputer...");
+        try {
+            await apiCall('addComputer', payload);
+            document.getElementById('modalAddComputer').classList.add('hidden');
+            e.target.reset();
+            showToast("Komputer berhasil ditambahkan", "success");
+            fetchData();
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    async function submitChangePassword(e) {
+        e.preventDefault();
+        const pass1 = document.getElementById('setPass1').value;
+        const pass2 = document.getElementById('setPass2').value;
+        if (pass1 !== pass2) return showToast("Password tidak cocok!", "error");
+        
+        showLoader("Update password...");
+        try {
+            await apiCall('changePassword', { nip: currentUser.nip, pass: pass1 });
+            e.target.reset();
+            hideLoader();
+            showToast("Password berhasil diubah", "success");
+        } catch (error) {
+            hideLoader();
+            showToast(error.message, "error");
+        }
+    }
+
+    // === DUMMY BACKEND UNTUK PREVIEW UI ===
+    function dummyBackend(action, payload) {
+        if(action === 'login') return { nip: payload.nip, nama: "Fitro Borney", role: payload.nip === '1111' ? 'Admin' : 'Editor' };
+        if(action === 'getDashboard') return { computers: [
+            { id: "PC-1", nama: "Mac Studio M2", spek: "M2 Ultra, 128GB", tahun: "2023", lokasi: "Ruang Edit-1", status: "Tersedia", pengguna: "", waktu_mulai: "", acara: "", tayang: "" },
+            { id: "PC-2", nama: "MSI Raider", spek: "i9 13th, RTX 4080", tahun: "2023", lokasi: "Ruang Edit-1", status: "Terpakai", pengguna: "2222", waktu_mulai: "2026-07-14 09:00:00", acara: "Sekolahku Keren", tayang: "2026-07-20" },
+            { id: "PC-3", nama: "Mac Pro", spek: "M3 Max", tahun: "2024", lokasi: "Ruang VO", status: "Maintenance", pengguna: "", waktu_mulai: "", acara: "", tayang: "" }
+        ]};
+        if(action === 'getHistory') return [
+            { waktu_mulai: "2026-07-13 10:00:00", waktu_selesai: "2026-07-13 14:00:00", id_komputer: "PC-1", nip: "2222", nama_pengguna: "Budi Editor", acara: "Berita Siang", produser: "Andi", pa: "Rina", tayang: "2026-07-14", durasi_paket: 30, catatan: "Aman" },
+            { waktu_mulai: "2026-07-13 15:00:00", waktu_selesai: "2026-07-13 16:30:00", id_komputer: "PC-3", nip: "1111", nama_pengguna: "Super Admin", acara: "MAINTENANCE", produser: "-", pa: "-", tayang: "-", durasi_paket: "-", catatan: "Keluhan: Lemot | Tindakan: Clear Cache & RAM" }
+        ];
+        if(action === 'getUsers') return [
+            { nip: "1111", nama: "Super Admin", role: "Admin" },
+            { nip: "2222", nama: "Budi Editor", role: "Editor" }
+        ];
+        return true;
+    }
+
+    // Auto-login & Multi-tab Sync check
+    window.onload = () => {
+        const saved = sessionStorage.getItem('postProUser');
+        if (saved) {
+            currentUser = JSON.parse(saved);
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appContainer').classList.remove('hidden');
+            initDashboard();
+        }
+    };
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'postProUser' && !e.newValue) {
+            alert("Anda telah logout dari tab lain.");
+            window.location.reload();
+        }
+    });
+
+    </script>
+</body>
+</html>
