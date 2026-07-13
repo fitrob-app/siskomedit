@@ -572,20 +572,20 @@
     }
    * Mengubah format tanggal YYYY-MM-DD menjadi DD-MM-YYYY
  */
-function formatDateIndo(dateInput) {
-    if (!dateInput) return '-';
-    try {
+    function formatDateIndo(dateInput) {
+        if (!dateInput) return '-';
+        try {
         // Ambil hanya bagian tanggal jika berupa string ISO (misal: 2026-07-24T00:00:00.000Z)
-        const cleanDate = dateInput.split('T')[0];
-        const parts = cleanDate.split('-');
-        if (parts.length === 3) {
+            const cleanDate = dateInput.split('T')[0];
+            const parts = cleanDate.split('-');
+            if (parts.length === 3) {
             return `${parts[2]}-${parts[1]}-${parts[0]}`; // Hasil: DD-MM-YYYY
-        }
+         }
+         return dateInput;
+       } catch (e) {
         return dateInput;
-    } catch (e) {
-        return dateInput;
-    }
-}
+     }
+  }
     function isDateInMonthAndYear(dateInput, targetYear, targetMonth) {
         if (!dateInput) return false;
         try {
