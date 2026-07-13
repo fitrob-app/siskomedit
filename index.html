@@ -893,7 +893,7 @@
                         <p class="flex justify-between"><span>Nama Pengguna:</span> <span class="font-semibold text-slate-800">${mappedUserName}</span></p>
                         <p class="flex justify-between"><span>Acara:</span> <span class="font-semibold text-slate-800 truncate ml-2" title="${comp.acara}">${comp.acara}</span></p>
                         <p class="flex justify-between"><span>Tayang:</span> <span class="font-semibold text-slate-800">${tayangDate}</span></p>
-                        <p class="flex justify-between"><span>Mulai:</span><span class="font-semibold text-slate-700">${(comp.waktu_mulai || '').split(' ')[1] || '-'}</span></p>
+                        <p class="flex justify-between"><span>Mulai:</span><span class="font-semibold text-slate-700">${formatToWITA(comp.waktu_mulai)}</span></p>
                     </div>`;
 
                     if(isMine && currentUser.role === 'Editor') {
